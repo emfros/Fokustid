@@ -115,12 +115,21 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 }
 
 .dial { position: relative; width: min(100%, 340px); aspect-ratio: 1; }
-.dial svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.dial svg { width: 100%; height: 100%; display: block; overflow: visible; touch-action: none; cursor: grab; }
+.dial { border-radius: 50%; }
+.dial.dragging svg { cursor: grabbing; }
+.dial:focus-visible { outline-offset: 6px; }
 .track { fill: none; stroke: var(--faint); }
 .progress { fill: none; stroke: url(#grad); stroke-linecap: round; }
 #grad stop:first-child { stop-color: color-mix(in oklab, var(--r1), var(--warn) calc(var(--u) * 100%)); transition: stop-color 1s; }
 #grad stop:last-child { stop-color: color-mix(in oklab, var(--r2), var(--warn) calc(var(--u) * 100%)); transition: stop-color 1s; }
-.knob { fill: #FFFFFF; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .18)); transition: opacity .3s; }
+.knob {
+  fill: #FFFFFF; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .18));
+  transform-box: fill-box; transform-origin: center; transition: transform .25s cubic-bezier(.3, 1.3, .5, 1);
+}
+.dial:hover .knob, .dial:focus-visible .knob { transform: scale(1.25); }
+.dial.dragging .knob { transform: scale(1.5); }
+.hit { fill: none; stroke: transparent; pointer-events: stroke; }
 .readout { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; pointer-events: none; }
 .time {
   font-weight: 200; font-variant-numeric: tabular-nums; letter-spacing: -.05em; line-height: 1;
@@ -252,7 +261,7 @@ kbd { font-family: var(--f); font-size: .7rem; font-weight: 600; padding: 1px 6p
       <button type="button" id="m-long" data-mode="long" aria-pressed="false">Lang pause</button>
     </div>
 
-    <div class="dial">
+    <div class="dial" id="dial" tabindex="0" role="slider" aria-label="Gjenstående tid. Dra i ringen eller bruk piltastene.">
       <svg viewBox="0 0 320 320" aria-hidden="true">
         <defs>
           <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0"></stop><stop offset="1"></stop></linearGradient>
@@ -260,9 +269,10 @@ kbd { font-family: var(--f); font-size: .7rem; font-weight: 600; padding: 1px 6p
         <circle class="track" cx="160" cy="160" r="140" stroke-width="6"></circle>
         <circle class="progress" id="ring" cx="160" cy="160" r="140" stroke-width="6" transform="rotate(-90 160 160)"></circle>
         <circle class="knob" id="knob" cx="160" cy="20" r="8"></circle>
+        <circle class="hit" id="hit" cx="160" cy="160" r="140" stroke-width="56"></circle>
       </svg>
       <div class="readout">
-        <div class="time" id="time" role="timer">25:00</div>
+        <div class="time" id="time">25:00</div>
         <div class="sub" id="sub">Fokus</div>
       </div>
     </div>
@@ -341,7 +351,8 @@ kbd { font-family: var(--f); font-size: .7rem; font-weight: 600; padding: 1px 6p
     store.get("settings", {})
   );
 
-  const S = { mode: "focus", duration: settings.focus * 60000, remaining: settings.focus * 60000, endAt: 0, running: false, done: 0, startedAt: null };
+  const S = { mode: "focus", duration: settings.focus * 60000, remaining: settings.focus * 60000, endAt: 0, running: false, done: 0, startedAt: null, started: false, focused: 0, runStart: 0 };
+  let dragging = false;
 
   // ---- Ring ----
   const R = 140, C = 2 * Math.PI * R;
@@ -361,7 +372,6 @@ kbd { font-family: var(--f); font-size: .7rem; font-weight: 600; padding: 1px 6p
     const a = p * 2 * Math.PI - Math.PI / 2;
     knob.setAttribute("cx", 160 + R * Math.cos(a));
     knob.setAttribute("cy", 160 + R * Math.sin(a));
-    knob.style.opacity = p > 0 ? 1 : 0;
     // Fargen glir mot rødt i siste del: siste 5 min, eller siste 20 % for korte økter
     const warnWindow = Math.min(5 * 60000, S.duration * 0.2);
     const x = S.remaining < S.duration ? Math.min(1, Math.max(0, 1 - S.remaining / warnWindow)) : 0;
@@ -371,8 +381,14 @@ kbd { font-family: var(--f); font-size: .7rem; font-weight: 600; padding: 1px 6p
     const t = fmt(S.remaining);
     if ($("time").textContent !== t) $("time").textContent = t;
     document.title = S.running || S.remaining < S.duration ? `${t} · ${LABEL[S.mode]}` : "Fokusøkt";
-    $("sub").textContent = S.running ? `${LABEL[S.mode]} · ferdig ${clock(new Date(S.endAt))}`
-      : (S.remaining < S.duration ? "På pause" : LABEL[S.mode]);
+    $("sub").textContent = dragging ? "Slipp for å sette tiden"
+      : S.running ? `${LABEL[S.mode]} · ferdig ${clock(new Date(S.endAt))}`
+      : (S.started ? "På pause" : LABEL[S.mode]);
+    const dial = $("dial"), mins = Math.ceil(S.remaining / 60000);
+    dial.setAttribute("aria-valuemin", 1);
+    dial.setAttribute("aria-valuemax", Math.round(S.duration / 60000));
+    dial.setAttribute("aria-valuenow", mins);
+    dial.setAttribute("aria-valuetext", `${mins} minutter igjen`);
   }
 
   function moveThumb() {
@@ -383,7 +399,7 @@ kbd { font-family: var(--f); font-size: .7rem; font-weight: 600; padding: 1px 6p
 
   function renderStatic() {
     document.body.dataset.mode = S.mode;
-    document.body.classList.toggle("paused", !S.running && S.remaining < S.duration);
+    document.body.classList.toggle("paused", !S.running && S.started);
     document.querySelectorAll(".modes button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === S.mode));
     moveThumb();
     $("toggle").setAttribute("aria-label", S.running ? "Pause" : "Start");
@@ -427,13 +443,14 @@ kbd { font-family: var(--f); font-size: .7rem; font-weight: 600; padding: 1px 6p
   function start() {
     audio();
     if (S.remaining <= 0) S.remaining = S.duration;
-    if (S.mode === "focus" && S.remaining === S.duration) S.startedAt = Date.now();
+    if (!S.started) { S.started = true; S.startedAt = Date.now(); S.focused = 0; }
+    S.runStart = Date.now();
     S.endAt = Date.now() + S.remaining; S.running = true; wake(true); renderStatic();
   }
-  function pause() { S.remaining = Math.max(0, S.endAt - Date.now()); S.running = false; wake(false); renderStatic(); }
+  function pause() { S.remaining = Math.max(0, S.endAt - Date.now()); S.focused += Date.now() - S.runStart; S.running = false; wake(false); renderStatic(); }
   function toggle() { S.running ? pause() : start(); }
   function setMode(m, keepRunning = false) {
-    S.mode = m; S.duration = settings[m] * 60000; S.remaining = S.duration; S.running = false;
+    S.mode = m; S.duration = settings[m] * 60000; S.remaining = S.duration; S.running = false; S.started = false; S.focused = 0;
     renderStatic();
     if (keepRunning) start(); else wake(false);
   }
@@ -441,7 +458,7 @@ kbd { font-family: var(--f); font-size: .7rem; font-weight: 600; padding: 1px 6p
 
   function complete(natural) {
     if (S.mode === "focus") {
-      if (natural) { logSession(); S.done++; }
+      if (natural) { S.focused += Date.now() - S.runStart; logSession(); S.done++; }
       const next = S.done >= settings.every ? "long" : "short";
       if (natural) { chime(); toast(next === "long" ? "Bra jobba. Tid for en lang pause." : "Økt fullført. Ta en kort pause."); }
       setMode(next, natural && settings.auto);
@@ -452,10 +469,55 @@ kbd { font-family: var(--f); font-size: .7rem; font-weight: 600; padding: 1px 6p
     }
   }
 
+  // ---- Dra i ringen for å endre tiden ----
+  // Ringen tilsvarer hele øktens lengde. Posisjonen bestemmer gjenstående tid, i hele minutter.
+  function setRemaining(ms) {
+    S.remaining = Math.min(S.duration, Math.max(60000, ms));
+    if (S.running) S.endAt = Date.now() + S.remaining;
+    render();
+  }
+  let lastP = 0;
+  function angleToProgress(e) {
+    const b = $("dial").getBoundingClientRect();
+    const dx = e.clientX - (b.left + b.width / 2), dy = e.clientY - (b.top + b.height / 2);
+    let p = Math.atan2(dx, -dy) / (2 * Math.PI);
+    if (p < 0) p += 1;
+    // Ikke hopp over toppen: hold igjen ved start eller slutt i stedet for å bytte side
+    if (lastP > .75 && p < .25) p = 1;
+    else if (lastP < .25 && p > .75) p = 0;
+    return p;
+  }
+  function dragTo(e) {
+    const p = angleToProgress(e);
+    lastP = p;
+    setRemaining(Math.round((1 - p) * S.duration / 60000) * 60000);
+  }
+  ["hit", "knob"].forEach(id => $(id).addEventListener("pointerdown", e => {
+    e.preventDefault();
+    dragging = true; lastP = 1 - S.remaining / S.duration;
+    $("dial").classList.add("dragging");
+    $("dial").setPointerCapture(e.pointerId);
+    $("dial").focus({ preventScroll: true });
+    dragTo(e);
+  }));
+  $("dial").addEventListener("pointermove", e => { if (dragging) dragTo(e); });
+  const endDrag = () => {
+    if (!dragging) return;
+    dragging = false; $("dial").classList.remove("dragging"); render();
+  };
+  $("dial").addEventListener("pointerup", endDrag);
+  $("dial").addEventListener("pointercancel", endDrag);
+  $("dial").addEventListener("keydown", e => {
+    const step = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1 }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    setRemaining((Math.ceil(S.remaining / 60000) + step) * 60000);
+  });
+
   // ---- Logg ----
   function logSession() {
     const log = store.get(dayKey(), []);
-    log.push({ at: S.startedAt || (Date.now() - S.duration), min: settings.focus, what: $("task").value.trim() });
+    log.push({ at: S.startedAt || (Date.now() - S.duration), min: Math.max(1, Math.round(S.focused / 60000)), what: $("task").value.trim() });
     store.set(dayKey(), log); renderLog();
   }
   function renderLog() {
