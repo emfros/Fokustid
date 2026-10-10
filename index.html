@@ -1,0 +1,561 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fokusøkt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700&display=swap">
+<style>
+/* Layout: én flytende glassflate midt på en myk, levende fargebakgrunn. Alt annet gjemmes i glassark. */
+:root {
+  --bg: #EEF0F4;
+  --ink: #1E2230;
+  --muted: rgba(30, 34, 48, .52);
+  --faint: rgba(30, 34, 48, .10);
+  --glass: rgba(255, 255, 255, .38);
+  --glass-hi: rgba(255, 255, 255, .62);
+  --edge: rgba(255, 255, 255, .80);
+  --edge-lo: rgba(255, 255, 255, .25);
+  --shadow: rgba(46, 52, 82, .14);
+  --on-ink: #FFFFFF;
+  --blob: .9;
+  /* Modusfarger (fokus) */
+  --a: #FFC8B4; --b: #B6E4D2; --c: #DAD3FF;
+  --r1: #F29C7E; --r2: #86CDB4;
+  --f: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12141C; --ink: #EEF0F6; --muted: rgba(238, 240, 246, .55); --faint: rgba(238, 240, 246, .10);
+    --glass: rgba(255, 255, 255, .06); --glass-hi: rgba(255, 255, 255, .12);
+    --edge: rgba(255, 255, 255, .22); --edge-lo: rgba(255, 255, 255, .04);
+    --shadow: rgba(0, 0, 0, .40); --on-ink: #12141C; --blob: .38; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12141C; --ink: #EEF0F6; --muted: rgba(238, 240, 246, .55); --faint: rgba(238, 240, 246, .10);
+  --glass: rgba(255, 255, 255, .06); --glass-hi: rgba(255, 255, 255, .12);
+  --edge: rgba(255, 255, 255, .22); --edge-lo: rgba(255, 255, 255, .04);
+  --shadow: rgba(0, 0, 0, .40); --on-ink: #12141C; --blob: .38; color-scheme: dark;
+}
+body[data-mode="short"] { --a: #BEDFFF; --b: #C4F0E2; --c: #E4DAFF; --r1: #6FAEE8; --r2: #7AD5BE; }
+body[data-mode="long"]  { --a: #E8D2FF; --b: #FFD4E4; --c: #CCE0FF; --r1: #AE8AEA; --r2: #F09BBD; }
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f);
+  font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  padding-inline: 16px; padding-block: 20px 28px;
+  overflow-x: hidden;
+}
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--r1); outline-offset: 3px; }
+
+/* Levende bakgrunn */
+.aura { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; opacity: var(--blob); }
+.aura i { position: absolute; width: 60vmax; height: 60vmax; border-radius: 50%; filter: blur(70px); transition: background-color 1.4s ease; }
+.aura i:nth-child(1) { background: var(--a); top: -18vmax; left: -14vmax; animation: drift1 26s ease-in-out infinite alternate; }
+.aura i:nth-child(2) { background: var(--b); bottom: -22vmax; right: -16vmax; animation: drift2 32s ease-in-out infinite alternate; }
+.aura i:nth-child(3) { background: var(--c); top: 30%; left: 40%; width: 40vmax; height: 40vmax; animation: drift3 22s ease-in-out infinite alternate; }
+@keyframes drift1 { to { transform: translate(12vmax, 8vmax) scale(1.1); } }
+@keyframes drift2 { to { transform: translate(-10vmax, -6vmax) scale(.92); } }
+@keyframes drift3 { to { transform: translate(-16vmax, 6vmax) scale(1.15); } }
+
+/* Glass */
+.glass {
+  position: relative;
+  background: linear-gradient(160deg, var(--glass-hi), var(--glass) 45%);
+  -webkit-backdrop-filter: blur(28px) saturate(170%);
+  backdrop-filter: blur(28px) saturate(170%);
+  box-shadow: 0 20px 50px -18px var(--shadow), inset 0 1px 0 var(--edge), inset 0 -1px 0 var(--edge-lo);
+}
+.glass::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: linear-gradient(150deg, var(--edge), var(--edge-lo) 40%, var(--edge-lo) 60%, var(--edge));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+}
+
+.app { max-width: 520px; min-height: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { margin: 0; font-size: 1rem; font-weight: 600; letter-spacing: -.01em; }
+.brand span { color: var(--muted); font-weight: 400; }
+.icons { display: flex; gap: 8px; }
+.icon {
+  width: 42px; height: 42px; border-radius: 50%; border: 0; cursor: pointer;
+  display: grid; place-items: center; transition: transform .2s;
+}
+.icon svg { width: 18px; height: 18px; }
+.icon:hover { transform: translateY(-1px); }
+.icon:active { transform: scale(.94); }
+
+.card {
+  border-radius: 36px; padding: 22px clamp(18px, 6vw, 36px) 30px;
+  display: flex; flex-direction: column; align-items: center; gap: 22px;
+}
+
+.modes { display: flex; padding: 4px; border-radius: 999px; background: var(--faint); position: relative; max-width: 100%; }
+.modes button {
+  position: relative; z-index: 1; border: 0; background: none; cursor: pointer; white-space: nowrap;
+  padding: 7px 14px; border-radius: 999px; font-size: .85rem; font-weight: 500; color: var(--muted);
+  transition: color .3s;
+}
+.modes button[aria-pressed="true"] { color: var(--ink); }
+@media (max-width: 400px) {
+  .card { padding-inline: 12px; border-radius: 30px; }
+  .modes button { padding: 7px 9px; font-size: .78rem; }
+}
+.modes .thumb {
+  position: absolute; top: 4px; bottom: 4px; left: 0; border-radius: 999px;
+  background: var(--glass-hi); box-shadow: 0 4px 14px -6px var(--shadow), inset 0 1px 0 var(--edge);
+  transition: transform .45s cubic-bezier(.3, 1.3, .5, 1), width .45s cubic-bezier(.3, 1.3, .5, 1);
+}
+
+.dial { position: relative; width: min(100%, 340px); aspect-ratio: 1; }
+.dial svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.track { fill: none; stroke: var(--faint); }
+.progress { fill: none; stroke: url(#grad); stroke-linecap: round; }
+#grad stop:first-child { stop-color: var(--r1); transition: stop-color 1s; }
+#grad stop:last-child { stop-color: var(--r2); transition: stop-color 1s; }
+.knob { fill: #FFFFFF; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .18)); transition: opacity .3s; }
+.readout { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; pointer-events: none; }
+.time {
+  font-weight: 200; font-variant-numeric: tabular-nums; letter-spacing: -.05em; line-height: 1;
+  font-size: clamp(3.6rem, 17vw, 5.6rem);
+}
+.sub { font-size: .8rem; color: var(--muted); min-height: 1.3em; font-variant-numeric: tabular-nums; }
+body.paused .time { animation: breathe 2.4s ease-in-out infinite; }
+@keyframes breathe { 50% { opacity: .4; } }
+
+.task { width: 100%; max-width: 320px; }
+.task input {
+  width: 100%; text-align: center; border: 0; background: transparent; padding: 8px 6px;
+  font-size: .98rem; font-weight: 500; border-radius: 12px; transition: background-color .2s;
+}
+.task input::placeholder { color: var(--muted); font-weight: 400; }
+.task input:hover, .task input:focus { background: var(--faint); outline: none; }
+
+.controls { display: flex; align-items: center; justify-content: center; gap: 22px; }
+.round {
+  width: 52px; height: 52px; border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center;
+  transition: transform .2s;
+}
+.round svg { width: 20px; height: 20px; }
+.round:active, .play:active { transform: scale(.94); }
+.play {
+  width: 78px; height: 78px; border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center;
+  background: var(--ink); color: var(--on-ink);
+  box-shadow: 0 14px 30px -10px var(--shadow), inset 0 1px 0 rgba(255, 255, 255, .25);
+  transition: transform .2s, box-shadow .2s;
+}
+.play:hover { transform: translateY(-2px); box-shadow: 0 18px 34px -10px var(--shadow), inset 0 1px 0 rgba(255, 255, 255, .25); }
+.play svg { width: 26px; height: 26px; }
+
+.foot { display: flex; align-items: center; justify-content: center; gap: 14px; color: var(--muted); font-size: .8rem; flex-wrap: wrap; }
+.pips { display: flex; gap: 6px; }
+.pip { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); transition: background-color .4s, transform .4s; }
+.pip.on { background: var(--ink); }
+.dot { width: 3px; height: 3px; border-radius: 50%; background: var(--muted); }
+.keys { text-align: center; color: var(--muted); font-size: .74rem; }
+kbd { font-family: var(--f); font-size: .7rem; font-weight: 600; padding: 1px 6px; border-radius: 6px; background: var(--faint); color: var(--ink); }
+@media (max-width: 520px) { .keys { display: none; } }
+
+/* Glassark */
+.scrim {
+  position: fixed; inset: 0; z-index: 10; background: rgba(20, 22, 32, .18);
+  display: flex; align-items: flex-end; justify-content: center; padding: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  opacity: 0; pointer-events: none; transition: opacity .3s;
+}
+.scrim.open { opacity: 1; pointer-events: auto; }
+.sheet {
+  width: min(100%, 440px); max-height: 80vh; overflow-y: auto; border-radius: 30px; padding: 22px 22px 18px;
+  transform: translateY(24px) scale(.98); transition: transform .45s cubic-bezier(.3, 1.3, .5, 1);
+}
+.scrim.open .sheet { transform: none; }
+@media (min-width: 700px) { .scrim { align-items: center; } }
+.sheet[hidden] { display: none; }
+.sheet h2 { margin: 0 0 16px; font-size: 1.05rem; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+.close { width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--faint); cursor: pointer; display: grid; place-items: center; }
+.close svg { width: 14px; height: 14px; }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+.stat { padding: 10px 0; }
+.stat b { display: block; font-size: 1.5rem; font-weight: 300; font-variant-numeric: tabular-nums; letter-spacing: -.03em; line-height: 1.2; }
+.stat span { font-size: .74rem; color: var(--muted); }
+.goal-bar { height: 4px; border-radius: 4px; background: var(--faint); overflow: hidden; margin-bottom: 16px; }
+.goal-bar i { display: block; height: 100%; width: 0; border-radius: 4px; background: linear-gradient(90deg, var(--r1), var(--r2)); transition: width .6s; }
+.log { list-style: none; margin: 0; padding: 0; }
+.log li { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 12px; padding: 10px 0; border-top: 1px solid var(--faint); font-size: .9rem; align-items: baseline; }
+.log time, .log .dur { color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums; }
+.log .what { overflow-wrap: anywhere; }
+.empty { color: var(--muted); font-size: .88rem; margin: 0; padding: 8px 0; }
+
+.settings { display: flex; flex-direction: column; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--faint); font-size: .92rem; }
+.row:first-child { border-top: 0; }
+.num { display: inline-flex; align-items: center; gap: 2px; background: var(--faint); border-radius: 999px; padding: 3px; }
+.num button { width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent; cursor: pointer; font-size: 1rem; line-height: 1; color: var(--muted); }
+.num button:hover { background: var(--glass-hi); color: var(--ink); }
+.num output { min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; font-size: .88rem; }
+.switch { position: relative; width: 44px; height: 26px; flex: none; }
+.switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.switch i { position: absolute; inset: 0; border-radius: 26px; background: var(--faint); transition: background-color .25s; pointer-events: none; }
+.switch i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 2px 6px rgba(0, 0, 0, .2); transition: transform .3s cubic-bezier(.3, 1.3, .5, 1); }
+.switch input:checked + i { background: linear-gradient(90deg, var(--r1), var(--r2)); }
+.switch input:checked + i::after { transform: translateX(18px); }
+.switch input:focus-visible + i { outline: 2px solid var(--r1); outline-offset: 2px; }
+.linkbtn { border: 0; background: none; padding: 0; color: var(--muted); font-size: .82rem; cursor: pointer; }
+.linkbtn:hover { color: var(--ink); }
+
+.toast {
+  position: fixed; left: 50%; top: calc(18px + env(safe-area-inset-top, 0px)); z-index: 20;
+  transform: translate(-50%, -12px); padding: 10px 18px; border-radius: 999px; font-size: .88rem; font-weight: 500;
+  opacity: 0; pointer-events: none; transition: opacity .3s, transform .4s cubic-bezier(.3, 1.3, .5, 1);
+  max-width: calc(100% - 32px); text-align: center;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+
+<div class="aura" aria-hidden="true"><i></i><i></i><i></i></div>
+
+<div class="app">
+  <header>
+    <h1 class="brand">Fokusøkt</h1>
+    <div class="icons">
+      <button type="button" class="icon glass" id="openLog" aria-label="Dagens økter">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 19V11M10 19V5M16 19v-6M22 19H2"/></svg>
+      </button>
+      <button type="button" class="icon glass" id="openSettings" aria-label="Innstillinger">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="card glass">
+    <div class="modes" role="group" aria-label="Velg modus" id="modes">
+      <span class="thumb" id="thumb"></span>
+      <button type="button" id="m-focus" data-mode="focus" aria-pressed="true">Fokus</button>
+      <button type="button" id="m-short" data-mode="short" aria-pressed="false">Kort pause</button>
+      <button type="button" id="m-long" data-mode="long" aria-pressed="false">Lang pause</button>
+    </div>
+
+    <div class="dial">
+      <svg viewBox="0 0 320 320" aria-hidden="true">
+        <defs>
+          <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0"></stop><stop offset="1"></stop></linearGradient>
+        </defs>
+        <circle class="track" cx="160" cy="160" r="140" stroke-width="6"></circle>
+        <circle class="progress" id="ring" cx="160" cy="160" r="140" stroke-width="6" transform="rotate(-90 160 160)"></circle>
+        <circle class="knob" id="knob" cx="160" cy="20" r="8"></circle>
+      </svg>
+      <div class="readout">
+        <div class="time" id="time" role="timer">25:00</div>
+        <div class="sub" id="sub">Fokus</div>
+      </div>
+    </div>
+
+    <div class="task">
+      <label for="task" hidden>Hva jobber du med?</label>
+      <input id="task" type="text" maxlength="80" placeholder="Hva jobber du med?" autocomplete="off">
+    </div>
+
+    <div class="controls">
+      <button type="button" class="round glass" id="reset" aria-label="Nullstill" title="Nullstill (R)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3.5 4v4.5H8"/></svg>
+      </button>
+      <button type="button" class="play" id="toggle" aria-label="Start" title="Start / pause (mellomrom)">
+        <svg id="ico" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.2v13.6a.8.8 0 0 0 1.2.7l10.6-6.8a.8.8 0 0 0 0-1.4L9.2 4.5a.8.8 0 0 0-1.2.7z"/></svg>
+      </button>
+      <button type="button" class="round glass" id="skip" aria-label="Hopp over" title="Hopp over (S)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5.5l9 6.5-9 6.5z"/><path d="M18.5 5.5v13"/></svg>
+      </button>
+    </div>
+
+    <div class="foot">
+      <div class="pips" id="pips" aria-hidden="true"></div>
+      <span id="cycleText">Økt 1 av 4</span>
+      <span class="dot"></span>
+      <span id="todayLine">0 min i dag</span>
+    </div>
+  </main>
+
+  <p class="keys"><kbd>Mellomrom</kbd> start/pause &nbsp; <kbd>R</kbd> nullstill &nbsp; <kbd>S</kbd> hopp over</p>
+</div>
+
+<div class="scrim" id="scrim">
+  <section class="sheet glass" id="logSheet" hidden aria-label="Dagens økter">
+    <h2><span id="todayLong">I dag</span><button type="button" class="close" data-close aria-label="Lukk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></h2>
+    <div class="stats">
+      <div class="stat"><b id="sMin">0</b><span>minutter</span></div>
+      <div class="stat"><b id="sCount">0</b><span>økter</span></div>
+      <div class="stat"><b id="sGoal">0 %</b><span id="sGoalLbl">av dagsmål</span></div>
+    </div>
+    <div class="goal-bar"><i id="goalBar"></i></div>
+    <ul class="log" id="log"></ul>
+    <p class="empty" id="empty">Fullførte økter dukker opp her, med klokkeslett og hva du jobbet med.</p>
+  </section>
+
+  <section class="sheet glass" id="settingsSheet" hidden aria-label="Innstillinger">
+    <h2>Innstillinger<button type="button" class="close" data-close aria-label="Lukk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></h2>
+    <div class="settings">
+      <div class="row"><span>Fokus</span><span class="num" data-key="focus" data-min="1" data-max="120" data-unit="min"></span></div>
+      <div class="row"><span>Kort pause</span><span class="num" data-key="short" data-min="1" data-max="60" data-unit="min"></span></div>
+      <div class="row"><span>Lang pause</span><span class="num" data-key="long" data-min="1" data-max="60" data-unit="min"></span></div>
+      <div class="row"><span>Lang pause etter</span><span class="num" data-key="every" data-min="2" data-max="8" data-unit="økter"></span></div>
+      <div class="row"><span>Dagsmål</span><span class="num" data-key="goal" data-min="1" data-max="24" data-unit="økter"></span></div>
+      <div class="row"><label for="oAuto">Start neste automatisk</label><span class="switch"><input id="oAuto" type="checkbox"><i></i></span></div>
+      <div class="row"><label for="oSound">Lyd når tiden er ute</label><span class="switch"><input id="oSound" type="checkbox" checked><i></i></span></div>
+      <div class="row"><label for="oTick">Tikking i siste minutt</label><span class="switch"><input id="oTick" type="checkbox"><i></i></span></div>
+      <div class="row"><span></span><button type="button" class="linkbtn" id="clearLog">Tøm dagens logg</button></div>
+    </div>
+  </section>
+</div>
+
+<div class="toast glass" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+  };
+  const dayKey = () => { const d = new Date(); return `log-${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; };
+
+  const LABEL = { focus: "Fokus", short: "Kort pause", long: "Lang pause" };
+  const settings = Object.assign(
+    { focus: 25, short: 5, long: 15, every: 4, goal: 8, auto: false, sound: true, tick: false },
+    store.get("settings", {})
+  );
+
+  const S = { mode: "focus", duration: settings.focus * 60000, remaining: settings.focus * 60000, endAt: 0, running: false, done: 0, startedAt: null };
+
+  // ---- Ring ----
+  const R = 140, C = 2 * Math.PI * R;
+  const ring = $("ring"), knob = $("knob");
+  ring.style.strokeDasharray = C;
+
+  const fmt = ms => {
+    const s = Math.max(0, Math.ceil(ms / 1000));
+    return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  };
+  const clock = d => d.toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" });
+
+  function render() {
+    if (S.running) S.remaining = Math.max(0, S.endAt - Date.now());
+    const p = 1 - S.remaining / S.duration;
+    ring.style.strokeDashoffset = C * (1 - p);
+    const a = p * 2 * Math.PI - Math.PI / 2;
+    knob.setAttribute("cx", 160 + R * Math.cos(a));
+    knob.setAttribute("cy", 160 + R * Math.sin(a));
+    knob.style.opacity = p > 0 ? 1 : 0;
+    const t = fmt(S.remaining);
+    if ($("time").textContent !== t) $("time").textContent = t;
+    document.title = S.running || S.remaining < S.duration ? `${t} · ${LABEL[S.mode]}` : "Fokusøkt";
+    $("sub").textContent = S.running ? `${LABEL[S.mode]} · ferdig ${clock(new Date(S.endAt))}`
+      : (S.remaining < S.duration ? "På pause" : LABEL[S.mode]);
+  }
+
+  function moveThumb() {
+    const b = document.querySelector(`.modes button[data-mode="${S.mode}"]`), th = $("thumb");
+    th.style.width = b.offsetWidth + "px";
+    th.style.transform = `translateX(${b.offsetLeft}px)`;
+  }
+
+  function renderStatic() {
+    document.body.dataset.mode = S.mode;
+    document.body.classList.toggle("paused", !S.running && S.remaining < S.duration);
+    document.querySelectorAll(".modes button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === S.mode));
+    moveThumb();
+    $("toggle").setAttribute("aria-label", S.running ? "Pause" : "Start");
+    $("ico").innerHTML = S.running
+      ? '<rect x="6.5" y="5" width="3.8" height="14" rx="1.2"/><rect x="13.7" y="5" width="3.8" height="14" rx="1.2"/>'
+      : '<path d="M8 5.2v13.6a.8.8 0 0 0 1.2.7l10.6-6.8a.8.8 0 0 0 0-1.4L9.2 4.5a.8.8 0 0 0-1.2.7z"/>';
+    const pips = $("pips"); pips.innerHTML = "";
+    for (let i = 0; i < settings.every; i++) {
+      const d = document.createElement("span"); d.className = "pip" + (i < S.done ? " on" : ""); pips.appendChild(d);
+    }
+    $("cycleText").textContent = S.mode === "long" ? "Lang pause" : `Økt ${Math.min(S.done + (S.mode === "focus" ? 1 : 0), settings.every) || 1} av ${settings.every}`;
+    render();
+  }
+
+  // ---- Lyd ----
+  let ac = null;
+  const audio = () => { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === "suspended") ac.resume(); } catch {} return ac; };
+  function tone(freq, start, dur, vol = 0.16, type = "sine") {
+    const a = audio(); if (!a) return;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(0, a.currentTime + start);
+    g.gain.linearRampToValueAtTime(vol, a.currentTime + start + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + start + dur);
+    o.connect(g).connect(a.destination); o.start(a.currentTime + start); o.stop(a.currentTime + start + dur + 0.05);
+  }
+  const chime = () => { if (!settings.sound) return; [659.25, 783.99, 1046.5].forEach((f, i) => tone(f, i * 0.22, 1.4)); tone(1046.5, 0.9, 2.2, 0.1); };
+  const tick = () => tone(1800, 0, 0.03, 0.04, "triangle");
+
+  // ---- Skjerm våken ----
+  let lock = null;
+  async function wake(on) {
+    try {
+      if (on && "wakeLock" in navigator && !lock) { lock = await navigator.wakeLock.request("screen"); lock.addEventListener("release", () => lock = null); }
+      else if (!on && lock) { await lock.release(); lock = null; }
+    } catch {}
+  }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && S.running) wake(true); });
+
+  // ---- Styring ----
+  function start() {
+    audio();
+    if (S.remaining <= 0) S.remaining = S.duration;
+    if (S.mode === "focus" && S.remaining === S.duration) S.startedAt = Date.now();
+    S.endAt = Date.now() + S.remaining; S.running = true; wake(true); renderStatic();
+  }
+  function pause() { S.remaining = Math.max(0, S.endAt - Date.now()); S.running = false; wake(false); renderStatic(); }
+  function toggle() { S.running ? pause() : start(); }
+  function setMode(m, keepRunning = false) {
+    S.mode = m; S.duration = settings[m] * 60000; S.remaining = S.duration; S.running = false;
+    renderStatic();
+    if (keepRunning) start(); else wake(false);
+  }
+  function reset() { setMode(S.mode); toast("Nullstilt"); }
+
+  function complete(natural) {
+    if (S.mode === "focus") {
+      if (natural) { logSession(); S.done++; }
+      const next = S.done >= settings.every ? "long" : "short";
+      if (natural) { chime(); toast(next === "long" ? "Bra jobba. Tid for en lang pause." : "Økt fullført. Ta en kort pause."); }
+      setMode(next, natural && settings.auto);
+    } else {
+      if (S.mode === "long") S.done = 0;
+      if (natural) { chime(); toast("Pausen er over. Klar for neste økt?"); }
+      setMode("focus", natural && settings.auto);
+    }
+  }
+
+  // ---- Logg ----
+  function logSession() {
+    const log = store.get(dayKey(), []);
+    log.push({ at: S.startedAt || (Date.now() - S.duration), min: settings.focus, what: $("task").value.trim() });
+    store.set(dayKey(), log); renderLog();
+  }
+  function renderLog() {
+    const log = store.get(dayKey(), []);
+    const ul = $("log"); ul.innerHTML = "";
+    log.slice().reverse().forEach(e => {
+      const li = document.createElement("li");
+      const t = document.createElement("time"); t.textContent = clock(new Date(e.at));
+      const w = document.createElement("span"); w.className = "what"; w.textContent = e.what || "Fokusøkt";
+      const d = document.createElement("span"); d.className = "dur"; d.textContent = `${e.min} min`;
+      li.append(t, w, d); ul.appendChild(li);
+    });
+    $("empty").hidden = log.length > 0; ul.hidden = log.length === 0;
+    const mins = log.reduce((a, e) => a + e.min, 0);
+    const minTxt = mins >= 60 ? `${Math.floor(mins / 60)} t ${mins % 60} min` : `${mins} min`;
+    $("sMin").textContent = mins;
+    $("sCount").textContent = log.length;
+    const pct = Math.min(100, Math.round(log.length / settings.goal * 100));
+    $("sGoal").textContent = `${pct} %`;
+    $("sGoalLbl").textContent = `av ${settings.goal} økter`;
+    $("goalBar").style.width = pct + "%";
+    $("todayLine").textContent = `${minTxt} i dag`;
+  }
+  const now = new Date();
+  $("todayLong").textContent = now.toLocaleDateString("nb-NO", { weekday: "long", day: "numeric", month: "long" }).replace(/^./, c => c.toUpperCase());
+
+  let toastT;
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2600); }
+
+  // ---- Ark ----
+  const scrim = $("scrim");
+  function openSheet(id) {
+    ["logSheet", "settingsSheet"].forEach(s => $(s).hidden = s !== id);
+    scrim.classList.add("open");
+    setTimeout(() => $(id).querySelector(".close").focus(), 50);
+  }
+  function closeSheet() { scrim.classList.remove("open"); }
+  $("openLog").addEventListener("click", () => openSheet("logSheet"));
+  $("openSettings").addEventListener("click", () => openSheet("settingsSheet"));
+  scrim.addEventListener("click", e => { if (e.target === scrim || e.target.closest("[data-close]")) closeSheet(); });
+
+  // ---- Løkke ----
+  let lastSec = -1;
+  setInterval(() => {
+    if (!S.running) return;
+    render();
+    const sec = Math.ceil(S.remaining / 1000);
+    if (settings.tick && sec !== lastSec && sec <= 60 && sec > 0) tick();
+    lastSec = sec;
+    if (S.remaining <= 0) { S.running = false; complete(true); }
+  }, 250);
+  (function raf() { if (S.running) render(); requestAnimationFrame(raf); })();
+
+  // ---- Hendelser ----
+  $("toggle").addEventListener("click", toggle);
+  $("reset").addEventListener("click", reset);
+  $("skip").addEventListener("click", () => complete(false));
+  document.querySelectorAll(".modes button").forEach(b => b.addEventListener("click", () => {
+    if (S.mode === "long" && b.dataset.mode !== "long") S.done = 0;
+    setMode(b.dataset.mode);
+  }));
+  window.addEventListener("resize", moveThumb);
+  document.fonts?.ready.then(moveThumb);
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") return closeSheet();
+    if (e.target.matches("input") || e.metaKey || e.ctrlKey || e.altKey) {
+      if (e.key === "Enter" && e.target.id === "task") { e.target.blur(); if (!S.running) start(); }
+      return;
+    }
+    if (scrim.classList.contains("open")) return;
+    if (e.code === "Space" && !e.target.matches("button")) { e.preventDefault(); toggle(); }
+    else if (e.key === "r" || e.key === "R") reset();
+    else if (e.key === "s" || e.key === "S") complete(false);
+  });
+
+  // Steppere
+  document.querySelectorAll(".num").forEach(el => {
+    const key = el.dataset.key, min = +el.dataset.min, max = +el.dataset.max, unit = el.dataset.unit;
+    el.innerHTML = `<button type="button" aria-label="Mindre">−</button><output></output><button type="button" aria-label="Mer">+</button>`;
+    const out = el.querySelector("output");
+    const show = () => out.textContent = `${settings[key]} ${unit}`;
+    show();
+    el.querySelectorAll("button").forEach((b, i) => b.addEventListener("click", () => {
+      settings[key] = Math.min(max, Math.max(min, settings[key] + (i ? 1 : -1)));
+      store.set("settings", settings); show();
+      if (key === S.mode && !S.running && S.remaining === S.duration) setMode(S.mode);
+      if (key === "every") S.done = Math.min(S.done, settings.every - 1);
+      renderStatic(); renderLog();
+    }));
+  });
+  [["oAuto", "auto"], ["oSound", "sound"], ["oTick", "tick"]].forEach(([id, key]) => {
+    const el = $(id); el.checked = settings[key];
+    el.addEventListener("change", () => { settings[key] = el.checked; store.set("settings", settings); });
+  });
+
+  let confirmClear = false;
+  $("clearLog").addEventListener("click", e => {
+    if (!confirmClear) { confirmClear = true; e.target.textContent = "Trykk igjen for å tømme"; setTimeout(() => { confirmClear = false; e.target.textContent = "Tøm dagens logg"; }, 3000); return; }
+    store.set(dayKey(), []); confirmClear = false; e.target.textContent = "Tøm dagens logg"; renderLog(); toast("Dagens logg er tømt");
+  });
+
+  $("task").value = store.get("task", "");
+  $("task").addEventListener("input", e => store.set("task", e.target.value));
+
+  // Behold en løpende timer når siden oppdateres live
+  window.claude?.hot?.snapshot?.(() => ({ S: { ...S }, task: $("task").value }));
+  const boot = (data = {}) => {
+    if (data.S) { Object.assign(S, data.S); if (S.running && S.endAt < Date.now()) S.remaining = 0; }
+    S.duration = settings[S.mode] * 60000 || S.duration;
+    if (S.remaining > S.duration) S.remaining = S.duration;
+    if (data.task != null) $("task").value = data.task;
+    renderStatic(); renderLog();
+  };
+  window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
+})();
+</script>

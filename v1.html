@@ -1,0 +1,517 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fokusøkt v1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Instrument+Sans:wght@400;500;600&family=Geist+Mono:wght@300;400;500&display=swap">
+<style>
+/* Layout: one calm instrument — a dial with minute ticks — beside a slim "I dag"-logg. Mode tints the whole page. */
+:root {
+  --bg: #E7ECEA;
+  --surface: #F5F7F6;
+  --ink: #16252A;
+  --muted: #5B6B6E;
+  --line: #C9D3D0;
+  --track: #D7DFDC;
+  --focus: #2C6A56;
+  --short: #36699A;
+  --long: #6A5596;
+  --on-mode: #F5F7F6;
+  --mode: var(--focus);
+  --f-display: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1618; --surface: #152024; --ink: #E2EAE7; --muted: #8B9C9D;
+    --line: #283639; --track: #22302F; --focus: #6CC0A0; --short: #82B2DE; --long: #B39EE0;
+    --on-mode: #0E1618; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1618; --surface: #152024; --ink: #E2EAE7; --muted: #8B9C9D;
+  --line: #283639; --track: #22302F; --focus: #6CC0A0; --short: #82B2DE; --long: #B39EE0;
+  --on-mode: #0E1618; color-scheme: dark;
+}
+body[data-mode="short"] { --mode: var(--short); }
+body[data-mode="long"] { --mode: var(--long); }
+
+html, body { min-height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 15px;
+  line-height: 1.5;
+  padding-inline: 16px;
+  padding-block: 28px 40px;
+  transition: background-color .6s ease;
+}
+* { box-sizing: border-box; }
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--mode); outline-offset: 3px; border-radius: 6px; }
+
+.wrap {
+  max-width: 1040px; margin: 0 auto;
+  display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 28px; align-items: start;
+}
+@media (max-width: 860px) { .wrap { grid-template-columns: minmax(0, 1fr); } }
+
+header.top {
+  grid-column: 1 / -1;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.brand { font-family: var(--f-display); font-weight: 700; font-size: 1.35rem; letter-spacing: -0.01em; margin: 0; }
+.brand span { color: var(--mode); transition: color .6s; }
+.keys { color: var(--muted); font-size: .8rem; display: flex; gap: 14px; flex-wrap: wrap; }
+kbd {
+  font-family: var(--f-mono); font-size: .72rem; padding: 1px 6px; border: 1px solid var(--line);
+  border-bottom-width: 2px; border-radius: 5px; color: var(--ink); background: var(--surface);
+}
+
+.stage {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 22px;
+  padding: 26px clamp(16px, 4vw, 40px) 32px;
+  display: flex; flex-direction: column; align-items: center; gap: 22px; min-width: 0;
+}
+.modes {
+  display: inline-flex; padding: 4px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line);
+  max-width: 100%; overflow-x: auto;
+}
+.modes button {
+  border: 0; background: transparent; padding: 7px 16px; border-radius: 999px; cursor: pointer;
+  font-weight: 500; font-size: .9rem; color: var(--muted); white-space: nowrap;
+  transition: background-color .25s, color .25s;
+}
+.modes button[aria-pressed="true"] { background: var(--mode); color: var(--on-mode); }
+.modes button:hover:not([aria-pressed="true"]) { color: var(--ink); }
+
+.task { width: min(100%, 420px); }
+.task label { display: block; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; text-align: center; }
+.task input {
+  width: 100%; text-align: center; background: transparent; border: 0; border-bottom: 1px dashed var(--line);
+  padding: 6px 4px; font-size: 1.05rem; font-weight: 500;
+}
+.task input::placeholder { color: var(--muted); opacity: .7; }
+.task input:focus { outline: none; border-bottom: 1px solid var(--mode); }
+
+.dial { position: relative; width: min(100%, 380px); aspect-ratio: 1; max-width: 100%; }
+.dial svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.tick { stroke: var(--line); stroke-linecap: round; transition: stroke .3s; }
+.tick.major { stroke: var(--muted); }
+.tick.done { stroke: var(--mode); }
+.track { fill: none; stroke: var(--track); }
+.progress { fill: none; stroke: var(--mode); stroke-linecap: round; transition: stroke .6s; }
+.knob { fill: var(--mode); stroke: var(--surface); stroke-width: 4; transition: fill .6s; }
+.readout {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  pointer-events: none;
+}
+.phase { font-size: .74rem; letter-spacing: .14em; text-transform: uppercase; color: var(--mode); font-weight: 600; transition: color .6s; }
+.time {
+  font-family: var(--f-mono); font-weight: 300; font-variant-numeric: tabular-nums;
+  font-size: clamp(3.2rem, 14vw, 5.4rem); letter-spacing: -0.04em; line-height: 1;
+}
+.endsat { font-size: .82rem; color: var(--muted); min-height: 1.3em; font-variant-numeric: tabular-nums; }
+body.paused .time { animation: blink 1.6s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: .35; } }
+
+.cycle { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .82rem; }
+.pips { display: flex; gap: 6px; }
+.pip { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--focus); }
+.pip.on { background: var(--focus); }
+
+.controls { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
+.btn {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 999px; cursor: pointer;
+  height: 48px; padding: 0 20px; display: inline-flex; align-items: center; gap: 8px; font-weight: 500;
+  transition: transform .12s, border-color .2s, background-color .2s;
+}
+.btn:hover { border-color: var(--muted); }
+.btn:active { transform: scale(.97); }
+.btn svg { width: 18px; height: 18px; flex: none; }
+.btn.primary {
+  height: 60px; min-width: 160px; justify-content: center; font-size: 1.05rem; font-weight: 600;
+  background: var(--mode); color: var(--on-mode); border-color: transparent;
+  transition: transform .12s, background-color .6s;
+}
+.btn.primary:hover { filter: brightness(1.08); }
+
+aside { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px 18px 16px; }
+.panel h2 {
+  font-family: var(--f-display); font-size: 1.05rem; font-weight: 600; margin: 0 0 12px;
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.panel h2 small { font-family: var(--f-body); font-weight: 400; font-size: .78rem; color: var(--muted); }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.stat { background: var(--bg); border-radius: 12px; padding: 10px 12px; }
+.stat b { display: block; font-family: var(--f-mono); font-weight: 400; font-size: 1.6rem; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.stat span { font-size: .76rem; color: var(--muted); }
+.goal { margin-bottom: 14px; }
+.goal-bar { height: 6px; border-radius: 6px; background: var(--track); overflow: hidden; }
+.goal-bar i { display: block; height: 100%; width: 0; background: var(--focus); border-radius: 6px; transition: width .5s; }
+.goal p { margin: 6px 0 0; font-size: .78rem; color: var(--muted); }
+.log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; max-height: 260px; overflow-y: auto; }
+.log li {
+  display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 10px; align-items: baseline;
+  padding: 8px 0; border-top: 1px solid var(--line); font-size: .88rem;
+}
+.log li:first-child { border-top: 0; }
+.log time, .log .dur { font-family: var(--f-mono); font-size: .78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.log .what { overflow-wrap: anywhere; }
+.empty { color: var(--muted); font-size: .86rem; margin: 0; }
+.linkbtn { border: 0; background: none; padding: 0; color: var(--muted); font-size: .78rem; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.linkbtn:hover { color: var(--ink); }
+
+details.panel summary {
+  font-family: var(--f-display); font-weight: 600; font-size: 1.05rem; cursor: pointer; list-style: none;
+  display: flex; justify-content: space-between; align-items: center;
+}
+details.panel summary::-webkit-details-marker { display: none; }
+details.panel summary::after { content: "+"; font-family: var(--f-mono); color: var(--muted); }
+details[open].panel summary::after { content: "–"; }
+.settings { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: .9rem; }
+.num { display: inline-flex; align-items: center; gap: 6px; }
+.num input {
+  width: 58px; text-align: center; padding: 5px 4px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--bg); font-family: var(--f-mono); font-variant-numeric: tabular-nums;
+}
+.num span { color: var(--muted); font-size: .78rem; }
+.switch { position: relative; width: 40px; height: 22px; flex: none; }
+.switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.switch i { position: absolute; inset: 0; border-radius: 22px; background: var(--track); transition: background-color .2s; pointer-events: none; }
+.switch i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); transition: transform .2s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+.switch input:checked + i { background: var(--mode); }
+.switch input:checked + i::after { transform: translateX(18px); }
+.switch input:focus-visible + i { outline: 2px solid var(--mode); outline-offset: 2px; }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px);
+  background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-size: .9rem; font-weight: 500;
+  opacity: 0; pointer-events: none; transition: opacity .3s, transform .3s; max-width: calc(100% - 32px); text-align: center;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1 class="brand">Fokus<span>økt</span></h1>
+    <div class="keys" aria-label="Tastatursnarveier">
+      <span><kbd>Mellomrom</kbd> start/pause</span>
+      <span><kbd>R</kbd> nullstill</span>
+      <span><kbd>S</kbd> hopp over</span>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="modes" role="group" aria-label="Velg modus">
+      <button type="button" id="m-focus" data-mode="focus" aria-pressed="true">Fokus</button>
+      <button type="button" id="m-short" data-mode="short" aria-pressed="false">Kort pause</button>
+      <button type="button" id="m-long" data-mode="long" aria-pressed="false">Lang pause</button>
+    </div>
+
+    <div class="task">
+      <label for="task">Hva jobber du med?</label>
+      <input id="task" type="text" maxlength="80" placeholder="F.eks. skrive rapportutkast" autocomplete="off">
+    </div>
+
+    <div class="dial">
+      <svg viewBox="0 0 320 320" aria-hidden="true">
+        <g id="ticks"></g>
+        <circle class="track" cx="160" cy="160" r="128" stroke-width="10"></circle>
+        <circle class="progress" id="ring" cx="160" cy="160" r="128" stroke-width="10" transform="rotate(-90 160 160)"></circle>
+        <circle class="knob" id="knob" cx="160" cy="32" r="9"></circle>
+      </svg>
+      <div class="readout">
+        <div class="phase" id="phase">Fokus</div>
+        <div class="time" id="time" role="timer" aria-live="off">25:00</div>
+        <div class="endsat" id="endsat"></div>
+      </div>
+    </div>
+
+    <div class="cycle">
+      <div class="pips" id="pips" aria-hidden="true"></div>
+      <span id="cycleText">Økt 1 av 4 før lang pause</span>
+    </div>
+
+    <div class="controls">
+      <button type="button" class="btn" id="reset" title="Nullstill (R)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+        Nullstill
+      </button>
+      <button type="button" class="btn primary" id="toggle" title="Start / pause (mellomrom)">
+        <svg id="ico" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>
+        <span id="toggleText">Start</span>
+      </button>
+      <button type="button" class="btn" id="skip" title="Hopp over (S)">
+        Hopp over
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5l10 7-10 7z"/><path d="M19 5v14"/></svg>
+      </button>
+    </div>
+  </main>
+
+  <aside>
+    <section class="panel">
+      <h2>I dag <small id="today"></small></h2>
+      <div class="stats">
+        <div class="stat"><b id="sMin">0</b><span>minutter i fokus</span></div>
+        <div class="stat"><b id="sCount">0</b><span>fullførte økter</span></div>
+      </div>
+      <div class="goal">
+        <div class="goal-bar"><i id="goalBar"></i></div>
+        <p id="goalText">0 av 8 økter mot dagsmålet</p>
+      </div>
+      <ul class="log" id="log"></ul>
+      <p class="empty" id="empty">Fullførte fokusøkter dukker opp her, med klokkeslett og hva du jobbet med.</p>
+    </section>
+
+    <details class="panel" id="settingsPanel">
+      <summary>Innstillinger</summary>
+      <div class="settings">
+        <div class="row"><label for="dFocus">Fokus</label><span class="num"><input id="dFocus" type="number" min="1" max="120" value="25"><span>min</span></span></div>
+        <div class="row"><label for="dShort">Kort pause</label><span class="num"><input id="dShort" type="number" min="1" max="60" value="5"><span>min</span></span></div>
+        <div class="row"><label for="dLong">Lang pause</label><span class="num"><input id="dLong" type="number" min="1" max="60" value="15"><span>min</span></span></div>
+        <div class="row"><label for="dEvery">Lang pause etter</label><span class="num"><input id="dEvery" type="number" min="2" max="8" value="4"><span>økter</span></span></div>
+        <div class="row"><label for="dGoal">Dagsmål</label><span class="num"><input id="dGoal" type="number" min="1" max="24" value="8"><span>økter</span></span></div>
+        <div class="row"><label for="oAuto">Start neste automatisk</label><span class="switch"><input id="oAuto" type="checkbox"><i></i></span></div>
+        <div class="row"><label for="oSound">Lyd når tiden er ute</label><span class="switch"><input id="oSound" type="checkbox" checked><i></i></span></div>
+        <div class="row"><label for="oTick">Tikking i siste minutt</label><span class="switch"><input id="oTick" type="checkbox"><i></i></span></div>
+        <div class="row"><span></span><button type="button" class="linkbtn" id="clearLog">Tøm dagens logg</button></div>
+      </div>
+    </details>
+  </aside>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+  };
+  const dayKey = () => { const d = new Date(); return `log-${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; };
+
+  const LABEL = { focus: "Fokus", short: "Kort pause", long: "Lang pause" };
+  const settings = Object.assign(
+    { focus: 25, short: 5, long: 15, every: 4, goal: 8, auto: false, sound: true, tick: false },
+    store.get("settings", {})
+  );
+
+  const S = { mode: "focus", duration: settings.focus * 60000, remaining: settings.focus * 60000, endAt: 0, running: false, done: 0, startedAt: null };
+
+  // ---- Dial ----
+  const R = 128, C = 2 * Math.PI * R;
+  const ring = $("ring"), knob = $("knob");
+  ring.style.strokeDasharray = C;
+  const ticksG = $("ticks"), ticks = [];
+  for (let i = 0; i < 60; i++) {
+    const a = (i / 60) * 2 * Math.PI - Math.PI / 2, major = i % 5 === 0;
+    const r1 = 146, r2 = major ? 158 : 153;
+    const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    l.setAttribute("x1", 160 + r1 * Math.cos(a)); l.setAttribute("y1", 160 + r1 * Math.sin(a));
+    l.setAttribute("x2", 160 + r2 * Math.cos(a)); l.setAttribute("y2", 160 + r2 * Math.sin(a));
+    l.setAttribute("stroke-width", major ? 2.2 : 1.2);
+    l.setAttribute("class", "tick" + (major ? " major" : ""));
+    ticksG.appendChild(l); ticks.push(l);
+  }
+
+  const fmt = ms => {
+    const s = Math.max(0, Math.ceil(ms / 1000));
+    return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  };
+  const clock = d => d.toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" });
+
+  let lastTicks = -1;
+  function render() {
+    if (S.running) S.remaining = Math.max(0, S.endAt - Date.now());
+    const p = 1 - S.remaining / S.duration;
+    ring.style.strokeDashoffset = C * (1 - p);
+    const a = p * 2 * Math.PI - Math.PI / 2;
+    knob.setAttribute("cx", 160 + R * Math.cos(a));
+    knob.setAttribute("cy", 160 + R * Math.sin(a));
+    knob.style.opacity = p > 0 ? 1 : 0;
+    const n = Math.floor(p * 60);
+    if (n !== lastTicks) { ticks.forEach((t, i) => t.classList.toggle("done", i < n)); lastTicks = n; }
+
+    const t = fmt(S.remaining);
+    if ($("time").textContent !== t) $("time").textContent = t;
+    document.title = S.running || S.remaining < S.duration ? `${t} · ${LABEL[S.mode]}` : "Fokusøkt v1";
+    $("endsat").textContent = S.running ? `Ferdig kl. ${clock(new Date(S.endAt))}` : (S.remaining < S.duration ? "På pause" : "");
+  }
+
+  function renderStatic() {
+    document.body.dataset.mode = S.mode;
+    document.body.classList.toggle("paused", !S.running && S.remaining < S.duration);
+    document.querySelectorAll(".modes button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === S.mode));
+    $("phase").textContent = LABEL[S.mode];
+    $("toggleText").textContent = S.running ? "Pause" : (S.remaining < S.duration ? "Fortsett" : "Start");
+    $("ico").innerHTML = S.running
+      ? '<rect x="6" y="4.5" width="4.2" height="15" rx="1"/><rect x="13.8" y="4.5" width="4.2" height="15" rx="1"/>'
+      : '<path d="M7 4.5v15l13-7.5z"/>';
+    const pips = $("pips"); pips.innerHTML = "";
+    for (let i = 0; i < settings.every; i++) {
+      const d = document.createElement("span"); d.className = "pip" + (i < S.done ? " on" : ""); pips.appendChild(d);
+    }
+    $("cycleText").textContent = S.mode === "focus"
+      ? `Økt ${S.done + 1} av ${settings.every} før lang pause`
+      : (S.mode === "long" ? "Lang pause, du har fortjent den" : `${S.done} av ${settings.every} økter fullført`);
+    render();
+  }
+
+  // ---- Sound ----
+  let ac = null;
+  const audio = () => { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === "suspended") ac.resume(); } catch {} return ac; };
+  function tone(freq, start, dur, vol = 0.18, type = "sine") {
+    const a = audio(); if (!a) return;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(0, a.currentTime + start);
+    g.gain.linearRampToValueAtTime(vol, a.currentTime + start + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + start + dur);
+    o.connect(g).connect(a.destination); o.start(a.currentTime + start); o.stop(a.currentTime + start + dur + 0.05);
+  }
+  const chime = () => { if (!settings.sound) return; [659.25, 783.99, 1046.5].forEach((f, i) => tone(f, i * 0.22, 1.4)); tone(1046.5, 0.9, 2.2, 0.12); };
+  const tick = () => tone(1800, 0, 0.04, 0.05, "square");
+
+  // ---- Wake lock ----
+  let lock = null;
+  async function wake(on) {
+    try {
+      if (on && "wakeLock" in navigator && !lock) { lock = await navigator.wakeLock.request("screen"); lock.addEventListener("release", () => lock = null); }
+      else if (!on && lock) { await lock.release(); lock = null; }
+    } catch {}
+  }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && S.running) wake(true); });
+
+  // ---- Control ----
+  function start() {
+    audio();
+    if (S.remaining <= 0) S.remaining = S.duration;
+    if (S.mode === "focus" && S.remaining === S.duration) S.startedAt = Date.now();
+    S.endAt = Date.now() + S.remaining; S.running = true; wake(true); renderStatic();
+  }
+  function pause() { S.remaining = Math.max(0, S.endAt - Date.now()); S.running = false; wake(false); renderStatic(); }
+  function toggle() { S.running ? pause() : start(); }
+  function setMode(m, keepRunning = false) {
+    S.mode = m; S.duration = settings[m] * 60000; S.remaining = S.duration; S.running = false; lastTicks = -1;
+    renderStatic();
+    if (keepRunning) start(); else wake(false);
+  }
+  function reset() { setMode(S.mode); toast("Nullstilt"); }
+
+  function complete(natural) {
+    if (S.mode === "focus") {
+      if (natural) { logSession(); S.done++; }
+      const next = S.done >= settings.every ? "long" : "short";
+      if (next === "long") S.done = settings.every;
+      if (natural) { chime(); toast(next === "long" ? "Bra jobba! Tid for en lang pause." : "Økt fullført. Ta en kort pause."); }
+      setMode(next, natural && settings.auto);
+    } else {
+      if (S.mode === "long") S.done = 0;
+      if (natural) { chime(); toast("Pausen er over. Klar for neste økt?"); }
+      setMode("focus", natural && settings.auto);
+    }
+  }
+
+  // ---- Log ----
+  function logSession() {
+    const log = store.get(dayKey(), []);
+    log.push({ at: S.startedAt || (Date.now() - S.duration), min: settings.focus, what: $("task").value.trim() });
+    store.set(dayKey(), log); renderLog();
+  }
+  function renderLog() {
+    const log = store.get(dayKey(), []);
+    const ul = $("log"); ul.innerHTML = "";
+    log.slice().reverse().forEach(e => {
+      const li = document.createElement("li");
+      const t = document.createElement("time"); t.textContent = clock(new Date(e.at));
+      const w = document.createElement("span"); w.className = "what"; w.textContent = e.what || "Fokusøkt";
+      const d = document.createElement("span"); d.className = "dur"; d.textContent = `${e.min} min`;
+      li.append(t, w, d); ul.appendChild(li);
+    });
+    $("empty").hidden = log.length > 0; ul.hidden = log.length === 0;
+    const mins = log.reduce((a, e) => a + e.min, 0);
+    $("sMin").textContent = mins >= 60 ? `${Math.floor(mins / 60)}t ${mins % 60}m` : mins;
+    $("sCount").textContent = log.length;
+    $("goalBar").style.width = Math.min(100, log.length / settings.goal * 100) + "%";
+    $("goalText").textContent = log.length >= settings.goal
+      ? `Dagsmålet på ${settings.goal} økter er nådd`
+      : `${log.length} av ${settings.goal} økter mot dagsmålet`;
+  }
+  $("today").textContent = new Date().toLocaleDateString("nb-NO", { weekday: "long", day: "numeric", month: "long" });
+
+  let toastT;
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2600); }
+
+  // ---- Loop ----
+  let lastSec = -1;
+  setInterval(() => {
+    if (!S.running) return;
+    render();
+    const sec = Math.ceil(S.remaining / 1000);
+    if (settings.tick && sec !== lastSec && sec <= 60 && sec > 0) tick();
+    lastSec = sec;
+    if (S.remaining <= 0) { S.running = false; complete(true); }
+  }, 250);
+  (function raf() { if (S.running) render(); requestAnimationFrame(raf); })();
+
+  // ---- Events ----
+  $("toggle").addEventListener("click", toggle);
+  $("reset").addEventListener("click", reset);
+  $("skip").addEventListener("click", () => complete(false));
+  document.querySelectorAll(".modes button").forEach(b => b.addEventListener("click", () => {
+    if (S.mode === "long" && b.dataset.mode !== "long") S.done = 0;
+    setMode(b.dataset.mode);
+  }));
+  document.addEventListener("keydown", e => {
+    if (e.target.matches("input, textarea") || e.metaKey || e.ctrlKey || e.altKey) {
+      if (e.key === "Enter" && e.target.id === "task") { e.target.blur(); if (!S.running) start(); }
+      return;
+    }
+    if (e.code === "Space" && !e.target.matches("button, summary")) { e.preventDefault(); toggle(); }
+    else if (e.key === "r" || e.key === "R") reset();
+    else if (e.key === "s" || e.key === "S") complete(false);
+  });
+
+  const bind = (id, key, isBool) => {
+    const el = $(id);
+    if (isBool) el.checked = settings[key]; else el.value = settings[key];
+    el.addEventListener("change", () => {
+      if (isBool) settings[key] = el.checked;
+      else {
+        const v = Math.round(Number(el.value));
+        settings[key] = Math.min(Number(el.max), Math.max(Number(el.min), v || settings[key]));
+        el.value = settings[key];
+      }
+      store.set("settings", settings);
+      if (["focus", "short", "long"].includes(key) && key === S.mode && !S.running && S.remaining === S.duration) setMode(S.mode);
+      if (key === "every") S.done = Math.min(S.done, settings.every - 1);
+      renderStatic(); renderLog();
+    });
+  };
+  bind("dFocus", "focus"); bind("dShort", "short"); bind("dLong", "long");
+  bind("dEvery", "every"); bind("dGoal", "goal");
+  bind("oAuto", "auto", true); bind("oSound", "sound", true); bind("oTick", "tick", true);
+
+  let confirmClear = false;
+  $("clearLog").addEventListener("click", e => {
+    if (!confirmClear) { confirmClear = true; e.target.textContent = "Klikk igjen for å tømme"; setTimeout(() => { confirmClear = false; e.target.textContent = "Tøm dagens logg"; }, 3000); return; }
+    store.set(dayKey(), []); confirmClear = false; e.target.textContent = "Tøm dagens logg"; renderLog(); toast("Dagens logg er tømt");
+  });
+
+  $("task").value = store.get("task", "");
+  $("task").addEventListener("input", e => store.set("task", e.target.value));
+
+  renderStatic(); renderLog();
+})();
+</script>
