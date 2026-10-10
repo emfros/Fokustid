@@ -1,34 +1,46 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Fokusøkt Grafitt</title>
+<title>Fokusøkt Lys</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@200;300;400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600&display=swap">
 <style>
-/* Layout: én flytende glassflate over en mørk, dyp bakgrunn. Alt annet gjemmes i glassark. */
-/* Bevisst bare mørkt tema: grafitt og stål, med messing som aksent – som et instrumentpanel. */
+/* Layout: én flytende glassflate midt på en myk, levende fargebakgrunn. Alt annet gjemmes i glassark. */
 :root {
-  --bg: #0A0C0F;
-  --ink: #F3F5F8;
-  --muted: rgba(243, 245, 248, .60);
-  --faint: rgba(243, 245, 248, .09);
-  --glass: rgba(255, 255, 255, .035);
-  --glass-hi: rgba(255, 255, 255, .085);
-  --edge: rgba(255, 255, 255, .17);
-  --edge-lo: rgba(255, 255, 255, .03);
-  --shadow: rgba(0, 0, 0, .60);
-  --on-accent: #0A0C0F;
-  --blob: 1;
-  /* Modusfarger (fokus: messing) */
-  --a: #3A2810; --b: #0F2430; --c: #191D27;
-  --r1: #F4BC4E; --r2: #C7802A;
+  --bg: #EEF0F4;
+  --ink: #1E2230;
+  --muted: rgba(30, 34, 48, .52);
+  --faint: rgba(30, 34, 48, .10);
+  --glass: rgba(255, 255, 255, .38);
+  --glass-hi: rgba(255, 255, 255, .62);
+  --edge: rgba(255, 255, 255, .80);
+  --edge-lo: rgba(255, 255, 255, .25);
+  --shadow: rgba(46, 52, 82, .14);
+  --on-ink: #FFFFFF;
+  --blob: .9;
+  /* Modusfarger (fokus) */
+  --a: #FFC8B4; --b: #B6E4D2; --c: #DAD3FF;
+  --r1: #F29C7E; --r2: #86CDB4;
   /* Slutten nærmer seg: --u går fra 0 til 1 og blander inn --warn */
-  --warn: #FF4B3E; --u: 0;
-  --f: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
-  color-scheme: dark;
+  --warn: #E5484D; --u: 0;
+  --f: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
-body[data-mode="short"] { --a: #0D2F38; --b: #102542; --c: #171C27; --r1: #5FD3E0; --r2: #2E8FC4; }
-body[data-mode="long"]  { --a: #1B2050; --b: #122B40; --c: #1F1A33; --r1: #9DB2FF; --r2: #5C6AF2; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12141C; --ink: #EEF0F6; --muted: rgba(238, 240, 246, .55); --faint: rgba(238, 240, 246, .10);
+    --glass: rgba(255, 255, 255, .06); --glass-hi: rgba(255, 255, 255, .12);
+    --edge: rgba(255, 255, 255, .22); --edge-lo: rgba(255, 255, 255, .04);
+    --shadow: rgba(0, 0, 0, .40); --on-ink: #12141C; --blob: .38; --warn: #FF6B6B; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12141C; --ink: #EEF0F6; --muted: rgba(238, 240, 246, .55); --faint: rgba(238, 240, 246, .10);
+  --glass: rgba(255, 255, 255, .06); --glass-hi: rgba(255, 255, 255, .12);
+  --edge: rgba(255, 255, 255, .22); --edge-lo: rgba(255, 255, 255, .04);
+  --shadow: rgba(0, 0, 0, .40); --on-ink: #12141C; --blob: .38; --warn: #FF6B6B; color-scheme: dark;
+}
+body[data-mode="short"] { --a: #BEDFFF; --b: #C4F0E2; --c: #E4DAFF; --r1: #6FAEE8; --r2: #7AD5BE; }
+body[data-mode="long"]  { --a: #E8D2FF; --b: #FFD4E4; --c: #CCE0FF; --r1: #AE8AEA; --r2: #F09BBD; }
 
 * { box-sizing: border-box; }
 html, body { height: 100%; }
@@ -122,7 +134,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .hit { fill: none; stroke: transparent; pointer-events: stroke; }
 .readout { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; pointer-events: none; }
 .time {
-  font-weight: 200; font-variant-numeric: tabular-nums; letter-spacing: -.02em; line-height: 1;
+  font-weight: 200; font-variant-numeric: tabular-nums; letter-spacing: -.05em; line-height: 1;
   font-size: clamp(3.6rem, 17vw, 5.6rem);
   color: color-mix(in oklab, var(--ink), var(--warn) calc(var(--u) * 100%));
 }
@@ -130,7 +142,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 /* Siste ti sekunder: rolig puls i takt med sekundene */
 body.final .time { animation: pulse 1s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.04); } }
-.sub { font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .16em; min-height: 1.3em; font-variant-numeric: tabular-nums; }
+.sub { font-size: .8rem; min-height: 1.3em; font-variant-numeric: tabular-nums; }
 body.paused .time { animation: breathe 2.4s ease-in-out infinite; }
 @keyframes breathe { 50% { opacity: .4; } }
 
@@ -151,17 +163,17 @@ body.paused .time { animation: breathe 2.4s ease-in-out infinite; }
 .round:active, .play:active { transform: scale(.94); }
 .play {
   width: 78px; height: 78px; border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center;
-  background: linear-gradient(160deg, var(--r1), var(--r2)); color: var(--on-accent);
-  box-shadow: 0 14px 34px -10px color-mix(in oklab, var(--r2), transparent 40%), inset 0 1px 0 rgba(255, 255, 255, .35);
+  background: var(--ink); color: var(--on-ink);
+  box-shadow: 0 14px 30px -10px var(--shadow), inset 0 1px 0 rgba(255, 255, 255, .25);
   transition: transform .2s, box-shadow .2s;
 }
-.play:hover { transform: translateY(-2px); box-shadow: 0 18px 40px -10px color-mix(in oklab, var(--r2), transparent 25%), inset 0 1px 0 rgba(255, 255, 255, .35); }
+.play:hover { transform: translateY(-2px); box-shadow: 0 18px 34px -10px var(--shadow), inset 0 1px 0 rgba(255, 255, 255, .25); }
 .play svg { width: 26px; height: 26px; }
 
 .foot { display: flex; align-items: center; justify-content: center; gap: 14px; color: var(--muted); font-size: .8rem; flex-wrap: wrap; }
 .pips { display: flex; gap: 6px; }
 .pip { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); transition: background-color .4s, transform .4s; }
-.pip.on { background: var(--r1); }
+.pip.on { background: var(--ink); }
 .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--muted); }
 .keys { text-align: center; color: var(--muted); font-size: .74rem; }
 kbd { font-family: var(--f); font-size: .7rem; font-weight: 600; padding: 1px 6px; border-radius: 6px; background: var(--faint); color: var(--ink); }
@@ -169,7 +181,7 @@ kbd { font-family: var(--f); font-size: .7rem; font-weight: 600; padding: 1px 6p
 
 /* Glassark */
 .scrim {
-  position: fixed; inset: 0; z-index: 10; background: rgba(4, 5, 7, .55);
+  position: fixed; inset: 0; z-index: 10; background: rgba(20, 22, 32, .18);
   display: flex; align-items: flex-end; justify-content: center; padding: 16px;
   padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   opacity: 0; pointer-events: none; transition: opacity .3s;
@@ -383,7 +395,7 @@ kbd { font-family: var(--f); font-size: .7rem; font-weight: 600; padding: 1px 6p
     if (t === last.t && dragging === last.drag && S.running === last.run && S.started === last.started) return;
     last.t = t; last.drag = dragging; last.run = S.running; last.started = S.started;
     timeEl.textContent = t;
-    document.title = S.running || S.remaining < S.duration ? `${t} · ${LABEL[S.mode]}` : "Fokusøkt Grafitt";
+    document.title = S.running || S.remaining < S.duration ? `${t} · ${LABEL[S.mode]}` : "Fokusøkt Lys";
     subEl.textContent = dragging ? "Slipp for å sette tiden"
       : S.running ? `${LABEL[S.mode]} · ferdig ${clock(new Date(S.endAt))}`
       : (S.started ? "På pause" : LABEL[S.mode]);
